@@ -6,11 +6,11 @@ import java.util.Random;
 
 public class GenerateGraph {
     public static void main(String[] argv) throws FileNotFoundException, UnsupportedEncodingException{
-        int sizeOfGraph = 100;
+        int sizeOfGraph = 14;
         
         Random random = new Random();
         
-        PrintWriter writer = new PrintWriter("graph_100.txt", "UTF-8");
+        PrintWriter writer = new PrintWriter("graph_14.txt", "UTF-8");
         
         for (int i = 0 ; i < sizeOfGraph; i++){
             for (int j = i ; j < sizeOfGraph; j++){

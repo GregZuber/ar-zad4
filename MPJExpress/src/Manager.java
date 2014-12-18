@@ -11,7 +11,7 @@ import mpi.Status;
 
 public class Manager {
 
-    private static final String SOURCE_FILE = "graph_100.txt";
+    private static final String SOURCE_FILE = "graph_14.txt";
     Graph graph = GraphInstance.getInstance();
     int numberOfThreads;
     private int workersThatEndsWork = 0;

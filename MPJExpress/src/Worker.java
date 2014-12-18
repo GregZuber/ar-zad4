@@ -66,7 +66,7 @@ public class Worker {
         
         
         if (node.getSumValue() >= shortestPath){
-            //System.out.println("Odcinam drzewo watek " + me + " na nodzie: " + node.getPathFromRoot());
+            System.out.println("Odcinam drzewo watek " + me + " na nodzie: " + node.getPathFromRoot());
             return;
         }
         
