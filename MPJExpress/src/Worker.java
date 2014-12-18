@@ -2,17 +2,19 @@ import java.util.HashMap;
 import java.util.LinkedList;
 
 import mpi.MPI;
+import mpi.Request;
+import mpi.Status;
 
 
 public class Worker {
     private Graph graph;
-
-    public void findShortestPathInSubtree(){
-        
-    }
+    private double shortestPath = Double.MAX_VALUE;
+    private int me;
     
     public void run(int me){
         //Graph[] graphs = new Graph[1];
+        
+        this.me = me;
         
         receiveGraph();
         
@@ -31,30 +33,50 @@ public class Worker {
     }
 
     private void receiveTrees(int me) {
-        //for (int i = 0 ; i < 3 ; i++){
-        if (true){
-//            System.out.println("================ TREE ================ " + me);
-            TreeNode[] treeNodes = new TreeNode[1] ;
-            MPI.COMM_WORLD.Recv(treeNodes, 0, 1, MPI.OBJECT, 0, 10);
-            
-//            System.out.println("Worker number " + me + " has sum value " + treeNodes[0].getSumValue());
-            
-            TreeNode treeNode = treeNodes[0];
-            
-            graph.getEdges(treeNode.getNodeNumberInGraph());
-            
-            //prepareChildren(treeNode);
-            
-            recursiveWatchTree(treeNode);
-            
 
+        if (true){
             
-//            System.out.println("================ END OF TREE ================ " + me);
+            
+            Status status = null;
+            while (status == null){
+                status = MPI.COMM_WORLD.Probe(0, 10);
+            }
+            
+            TreeNode[] treeNodes = new TreeNode[status.count] ;
+            
+            MPI.COMM_WORLD.Recv(treeNodes, 0, status.count, MPI.OBJECT, 0, 10);
+            
+            for (int i = 0 ; i < status.count ; i++){
+                TreeNode treeNode = treeNodes[i];
+                
+                graph.getEdges(treeNode.getNodeNumberInGraph());
+                
+                recursiveWatchTree(treeNode);
+            }
+            
             
         }        
     }
     
     private void recursiveWatchTree(TreeNode node){
+        
+        checkForBestSolution();
+        
+        //System.out.println("PATH ========================= " + node.getPathFromRoot());
+        
+        
+        if (node.getSumValue() >= shortestPath){
+            //System.out.println("Odcinam drzewo watek " + me + " na nodzie: " + node.getPathFromRoot());
+            return;
+        }
+        
+        
+        if (node.getPathFromRoot().size() > graph.getVerts().size()){
+            //System.out.println("KONCZE" + node.getPathFromRoot());
+            return;
+        }
+        
+        
         
         prepareChildren(node);
         for (TreeNode child : node.getChildren()){
@@ -68,6 +90,30 @@ public class Worker {
         }
     }
     
+    private void checkForBestSolution() {
+        TreeNode[] treeNodes = new TreeNode[1];
+        
+        Status status = MPI.COMM_WORLD.Iprobe(0, Main.BEST_SOLUTION_SEND_TO_WORKER);
+        
+        if (status != null){
+//            System.out.println("TAKKKKKKKKKKKKKKKKK");
+            status = MPI.COMM_WORLD.Recv(treeNodes, 0, 1, MPI.OBJECT, 0, Main.BEST_SOLUTION_SEND_TO_WORKER);
+            
+            TreeNode treeNode = treeNodes[0];
+
+//            System.out.println("receive request watek " + me + " treeNode " + treeNode + " worker " + status);
+            
+            if (treeNode != null){
+                shortestPath = treeNode.getSumValue();
+                
+                //System.out.println("===========THREAD" + me +  "=============SHORTEST PATH " + shortestPath);
+            }
+        }
+        
+
+        
+    }
+
     private void foundBestSolution(TreeNode node) {
         TreeNode[] nodes = new TreeNode[1];
         nodes[0] = node;
@@ -77,23 +123,10 @@ public class Worker {
 
     private void prepareChildren(TreeNode parent){
         parent.setChildren(TreeUtil.addChildren(parent, graph));
-        
-        /*
-        for(TreeNode child : parent.getChildren()){
-            child.setNodeValue(0.0);
-            LinkedList<Integer> path = (LinkedList) parent.getPathFromRoot().clone();
-            path.add(0);
-            child.setPathFromRoot(path);
-            child.setNodeNumberInGraph(0);
-            child.setSumValue(parent.getSumValue());
-            //child.setChildren(TreeUtil.addChildren(root, graph.getEdges(root.getNodeNumberInGraph())));
-        }
-        */
     }
     
 
     private void receiveGraph() {
-//        System.out.println("================ GRAPH ================");
         Graph[] graphs = new Graph[1];
         
         MPI.COMM_WORLD.Recv(graphs, 0, 1, MPI.OBJECT, 0, 9);
@@ -107,6 +140,5 @@ public class Worker {
         }        
         
         
-//        System.out.println("================ END OF GRAPH ================");
     }
 }
