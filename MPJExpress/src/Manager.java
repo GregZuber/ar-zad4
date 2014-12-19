@@ -1,5 +1,6 @@
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.HashMap;
@@ -11,7 +12,10 @@ import mpi.Status;
 
 public class Manager {
 
-    private static final String SOURCE_FILE = "graph_14.txt";
+    //private static final String SOURCE_FILE = "graph_10.txt";
+    private static final String SOURCE_FILE = "gr17_d.txt";
+    //private static final String SOURCE_FILE = "burma.tsp";
+    
     Graph graph = GraphInstance.getInstance();
     int numberOfThreads;
     private int workersThatEndsWork = 0;
@@ -25,7 +29,11 @@ public class Manager {
 
         //createMyLittleGraph();
         
-        readFile();
+        readMatrixFile();
+        
+        //readFile();
+        
+        //readTSPFile();
         
         startTime = System.currentTimeMillis();
         
@@ -40,6 +48,72 @@ public class Manager {
             stayInLoop = checkForResponsesFromWorkers();
         }
         
+    }
+    
+    private void readTSPFile() throws NumberFormatException, IOException{
+        File file = new File(
+                SOURCE_FILE);
+        BufferedReader br;
+
+        br = new BufferedReader(new FileReader(file));
+        String line;
+        
+        HashMap<Integer,Double[]> valuesFromFile = new HashMap<Integer, Double[]>();
+        
+        while ((line = br.readLine()) != null) {
+            String[] vertices = line.split(" ");
+            Double[] coordinates = new Double[2];
+            coordinates[0] = new Double(vertices[1]);
+            coordinates[1] = new Double(vertices[2]);
+            valuesFromFile.put(new Integer(vertices[0]), coordinates);
+        }        
+        
+        addValuesFromFileToGraph(valuesFromFile);
+        
+        br.close();
+    }
+    
+    private void addValuesFromFileToGraph(
+            HashMap<Integer, Double[]> valuesFromFile) {
+        for (Integer value : valuesFromFile.keySet()){
+            boolean wasValueFound = false;
+            for (Integer value2 : valuesFromFile.keySet()){
+                if (value2.equals(value)){
+                    wasValueFound = true;
+                    continue;
+                }
+                
+                if (wasValueFound){
+                    double xDistanceSqr = Math.pow(valuesFromFile.get(value)[0] - valuesFromFile.get(value2)[0], 2.0);
+                    double yDistanceSqr = Math.pow(valuesFromFile.get(value)[1] - valuesFromFile.get(value2)[1], 2.0);
+                    double distance = Math.sqrt(xDistanceSqr + yDistanceSqr);
+                    
+                    graph.addEdge(value, value2, distance);
+                }
+            }
+        }
+    }
+
+    private void readMatrixFile() throws NumberFormatException, IOException{
+        File file = new File(
+                SOURCE_FILE);
+        BufferedReader br;
+
+        br = new BufferedReader(new FileReader(file));
+        String line;
+        
+        int i = 0;
+        while ((line = br.readLine()) != null) {
+            String[] vertices = line.split(" ");
+            for (int j = i + 1 ; j < vertices.length ; j++){
+                System.out.println(i + " " + j + " " + vertices[j]);
+                graph.addEdge(i, j, new Double(vertices[j]));
+            }
+            
+            i++;
+        }        
+        
+        br.close();
     }
     
     private void sendRootChildrenToWorkers(TreeNode root) {
@@ -89,7 +163,7 @@ public class Manager {
             if (node.getSumValue() < bestSolution){
                 bestSolution = node.getSumValue();
                 bestSolutionNode = node;
-                //System.out.println( "path " + node.getPathFromRoot() + " sum value " + node.getSumValue() + " watek " + status.source);
+                System.out.println( "path " + node.getPathFromRoot() + " sum value " + node.getSumValue() + " watek " + status.source);
                 for (int i = 1 ; i < numberOfThreads ; i++ ){
                     //System.out.println("sent to " + i);
                     MPI.COMM_WORLD.Isend(nodes, 0, 1, MPI.OBJECT, i, Main.BEST_SOLUTION_SEND_TO_WORKER);
@@ -103,7 +177,9 @@ public class Manager {
         }
         
         if (workersThatEndsWork == numberOfThreads - 1){
-            System.out.println( "path " + bestSolutionNode.getPathFromRoot() + " sum value " + bestSolutionNode.getSumValue());
+            if (bestSolutionNode != null){
+                System.out.println( "path " + bestSolutionNode.getPathFromRoot() + " sum value " + bestSolutionNode.getSumValue());
+            }
             System.out.println("execution time: " + (System.currentTimeMillis() - startTime));
             return false;
         }
@@ -119,7 +195,13 @@ public class Manager {
         LinkedList<Integer> path = new LinkedList<Integer>();
         path.addLast(0);
         root.setPathFromRoot(path);
-        root.setNodeNumberInGraph(0);
+        int lowest = Integer.MAX_VALUE;
+        for (Integer node : graph.getVerts()){
+            if (node < lowest){
+                lowest = node;
+            }
+        }
+        root.setNodeNumberInGraph(lowest);
         root.setSumValue(0.0);
         root.setChildren(TreeUtil.addChildren(root, graph));
         
@@ -137,6 +219,7 @@ public class Manager {
 
     private void createMyLittleGraph(){
         
+        /*
         int sizeOfGraph = 10;
         
         Random random = new Random();
@@ -147,8 +230,8 @@ public class Manager {
                 
             }
         }
+        */
         
-        /*
         graph.addEdge(0, 1, 3.0);
         graph.addEdge(0, 2, 1.0);
         graph.addEdge(0, 3, 2.0);
@@ -158,7 +241,7 @@ public class Manager {
         graph.addEdge(2, 3, 4.0);
         graph.addEdge(2, 5, 4.0);
         graph.addEdge(3, 5, 4.0);
-        */
+        
         //graph.addEdge(3, 6, 4.0);
         
     }

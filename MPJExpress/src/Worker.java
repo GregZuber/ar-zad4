@@ -1,5 +1,8 @@
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 
 import mpi.MPI;
 import mpi.Request;
@@ -10,6 +13,7 @@ public class Worker {
     private Graph graph;
     private double shortestPath = Double.MAX_VALUE;
     private int me;
+    private int globalCountToCheck = 0;
     
     public void run(int me){
         //Graph[] graphs = new Graph[1];
@@ -46,19 +50,45 @@ public class Worker {
             
             MPI.COMM_WORLD.Recv(treeNodes, 0, status.count, MPI.OBJECT, 0, 10);
             
+            List<TreeNode> nodeList = new LinkedList<TreeNode>();
             for (int i = 0 ; i < status.count ; i++){
-                TreeNode treeNode = treeNodes[i];
+                nodeList.add(treeNodes[i]);
+            }
+            Collections.sort(nodeList, new CustomComparator());
+            
+            
+            
+            
+            for (TreeNode node : nodeList){
+                //System.out.println(node.getSumValue());
                 
-                graph.getEdges(treeNode.getNodeNumberInGraph());
+                graph.getEdges(node.getNodeNumberInGraph());
                 
-                recursiveWatchTree(treeNode);
+                recursiveWatchTree(node);
             }
             
             
         }        
     }
     
+    private class CustomComparator implements Comparator<TreeNode> {
+        @Override
+        public int compare(TreeNode arg0, TreeNode arg1) {
+            if (arg0.getSumValue() < arg1.getSumValue()){
+                return -1;
+            } else {
+                return 1;
+            }
+        }
+    }
+    
     private void recursiveWatchTree(TreeNode node){
+        /*
+        globalCountToCheck++;
+        if (globalCountToCheck % 10 == 0){
+            checkForBestSolution();
+        }
+        */
         
         checkForBestSolution();
         
@@ -66,7 +96,7 @@ public class Worker {
         
         
         if (node.getSumValue() >= shortestPath){
-            System.out.println("Odcinam drzewo watek " + me + " na nodzie: " + node.getPathFromRoot());
+            //System.out.println("Odcinam drzewo watek " + me + " na nodzie: " + node.getPathFromRoot());
             return;
         }
         
@@ -76,10 +106,23 @@ public class Worker {
             return;
         }
         
-        
+
         
         prepareChildren(node);
-        for (TreeNode child : node.getChildren()){
+        
+        List<TreeNode> nodeList = node.getChildren();
+        Collections.sort(nodeList, new CustomComparator());
+        
+        /*
+        System.out.println("SUMaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa ");
+        for (TreeNode child : nodeList){
+            System.out.println("SUM "  + child.getSumValue());
+        }
+        */
+        
+        for (TreeNode child : nodeList){
+            
+            //System.out.println("NODE "  + child.getPathFromRoot());
             
             if (child.getPathFromRoot().size() == graph.getVerts().size() + 1){
                 foundBestSolution(child);
@@ -115,10 +158,13 @@ public class Worker {
     }
 
     private void foundBestSolution(TreeNode node) {
-        TreeNode[] nodes = new TreeNode[1];
-        nodes[0] = node;
-        
-        MPI.COMM_WORLD.Send(nodes, 0, 1, MPI.OBJECT, 0, Main.BEST_SOLUTION_FIND);
+        if (node.getSumValue() <shortestPath ){
+            TreeNode[] nodes = new TreeNode[1];
+            nodes[0] = node;
+            
+            MPI.COMM_WORLD.Send(nodes, 0, 1, MPI.OBJECT, 0, Main.BEST_SOLUTION_FIND);
+        }
+
     }
 
     private void prepareChildren(TreeNode parent){
@@ -133,12 +179,14 @@ public class Worker {
         
         graph = graphs[0];
         
+        /*
         HashMap<Integer, Double> edgesFromV0 = graph.getEdges(0);
 
         for (Integer v : edgesFromV0.keySet()) {
 //            System.out.println(v + " " + edgesFromV0.get(v));
         }        
         
+        */
         
     }
 }
