@@ -64,7 +64,7 @@ public class Worker {
                 
                 graph.getEdges(node.getNodeNumberInGraph());
                 
-                recursiveWatchTree(node);
+                recursiveWatchTree(node.getNodeNumberInGraph(), node.getPathFromRoot()  , node.getSumValue());
             }
             
             
@@ -82,36 +82,56 @@ public class Worker {
         }
     }
     
-    private void recursiveWatchTree(TreeNode node){
+    private class CustomComparatorInt implements Comparator<Integer> {
+        private int parent;
+        
+        public CustomComparatorInt(Integer numberInGraph) {
+            this.parent = numberInGraph;
+        }
+
+        @Override
+        public int compare(Integer arg0, Integer arg1) {
+            if (graph.getEdges(arg0).get(parent) < graph.getEdges(arg1).get(parent)){
+                return -1;
+            } else {
+                return 1;
+            }
+        }
+    }
+    
+    private void recursiveWatchTree(Integer numberInGraph, List<Integer> path, double sum){
+        
         /*
         globalCountToCheck++;
-        if (globalCountToCheck % 10 == 0){
+        if (globalCountToCheck % 1000 == 0){
             checkForBestSolution();
         }
         */
         
+        
         checkForBestSolution();
+        
+
         
         //System.out.println("PATH ========================= " + node.getPathFromRoot());
         
         
-        if (node.getSumValue() >= shortestPath){
+        if (sum >= shortestPath){
             //System.out.println("Odcinam drzewo watek " + me + " na nodzie: " + node.getPathFromRoot());
             return;
         }
         
         
-        if (node.getPathFromRoot().size() > graph.getVerts().size()){
+        if ( path.size() > graph.getVerts().size()){
             //System.out.println("KONCZE" + node.getPathFromRoot());
             return;
         }
         
 
         
-        prepareChildren(node);
+        List<Integer> children = prepareChildren(numberInGraph, path);
         
-        List<TreeNode> nodeList = node.getChildren();
-        Collections.sort(nodeList, new CustomComparator());
+        Collections.sort(children, new CustomComparatorInt(numberInGraph));
         
         /*
         System.out.println("SUMaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa ");
@@ -120,16 +140,31 @@ public class Worker {
         }
         */
         
-        for (TreeNode child : nodeList){
+        for (Integer intChild : children){
             
-            //System.out.println("NODE "  + child.getPathFromRoot());
+            globalCountToCheck++;
+            if (globalCountToCheck % 1000000 == 0){
+                //System.out.println("NODE "  + path.toString());
+            }
             
-            if (child.getPathFromRoot().size() == graph.getVerts().size() + 1){
-                foundBestSolution(child);
+            //System.out.println("NODE "  + path.toString());
+            
+            //sum += graph.getEdges(intChild).get(numberInGraph);
+            
+            List<Integer> listToReturn = new LinkedList<Integer>();
+            
+            for (Integer integer : path){
+                listToReturn.add(integer);
+            }
+            
+            listToReturn.add(intChild);
+            
+            if (listToReturn.size() == graph.getVerts().size() + 1){
+                foundBestSolution(listToReturn, sum + graph.getEdges(intChild).get(numberInGraph));
             }
             
             
-            recursiveWatchTree(child);
+            recursiveWatchTree(intChild, listToReturn, sum + graph.getEdges(intChild).get(numberInGraph));
         }
     }
     
@@ -157,18 +192,22 @@ public class Worker {
         
     }
 
-    private void foundBestSolution(TreeNode node) {
-        if (node.getSumValue() <shortestPath ){
+    private void foundBestSolution(List<Integer> path, double sum) {
+        if (sum < shortestPath ){
             TreeNode[] nodes = new TreeNode[1];
+            TreeNode node = new TreeNode();
+            node.setSumValue(sum);
+            node.setPathFromRoot(path);
             nodes[0] = node;
+            
             
             MPI.COMM_WORLD.Send(nodes, 0, 1, MPI.OBJECT, 0, Main.BEST_SOLUTION_FIND);
         }
 
     }
 
-    private void prepareChildren(TreeNode parent){
-        parent.setChildren(TreeUtil.addChildren(parent, graph));
+    private List<Integer> prepareChildren(Integer numberInGraph, List<Integer> path){
+        return TreeUtil.addChildren(numberInGraph, graph, path);
     }
     
 

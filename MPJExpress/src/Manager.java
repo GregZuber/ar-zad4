@@ -106,7 +106,7 @@ public class Manager {
         while ((line = br.readLine()) != null) {
             String[] vertices = line.split(" ");
             for (int j = i + 1 ; j < vertices.length ; j++){
-                System.out.println(i + " " + j + " " + vertices[j]);
+                //System.out.println(i + " " + j + " " + vertices[j]);
                 graph.addEdge(i, j, new Double(vertices[j]));
             }
             

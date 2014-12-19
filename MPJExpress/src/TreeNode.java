@@ -5,7 +5,7 @@ import java.util.List;
 
 public class TreeNode implements Serializable {
     private Integer nodeNumberInGraph;
-    private LinkedList<Integer> pathFromRoot;
+    private List<Integer> pathFromRoot;
     private Double sumValue;
     private Double nodeValue;
     private LinkedList<TreeNode> children;
@@ -17,7 +17,7 @@ public class TreeNode implements Serializable {
         this.children.addAll(treeNodes);
     }
     public void addToPathFromRoot(Integer v){
-        pathFromRoot.addLast(v);
+        pathFromRoot.add(v);
     }
     public Integer getNodeNumberInGraph() {
         return nodeNumberInGraph;
@@ -25,10 +25,10 @@ public class TreeNode implements Serializable {
     public void setNodeNumberInGraph(Integer nodeNumberInGraph) {
         this.nodeNumberInGraph = nodeNumberInGraph;
     }
-    public LinkedList<Integer> getPathFromRoot() {
+    public List<Integer> getPathFromRoot() {
         return pathFromRoot;
     }
-    public void setPathFromRoot(LinkedList<Integer> pathFromRoot) {
+    public void setPathFromRoot(List<Integer> pathFromRoot) {
         this.pathFromRoot = pathFromRoot;
     }
     public Double getSumValue() {
