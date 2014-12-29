@@ -13,7 +13,7 @@ import mpi.Status;
 public class Manager {
 
     //private static final String SOURCE_FILE = "graph_10.txt";
-    private static final String SOURCE_FILE = "gr17_d.txt";
+    private static final String SOURCE_FILE = "graph_16.txt";
     //private static final String SOURCE_FILE = "burma.tsp";
     
     Graph graph = GraphInstance.getInstance();
@@ -29,9 +29,9 @@ public class Manager {
 
         //createMyLittleGraph();
         
-        readMatrixFile();
+        //readMatrixFile();
         
-        //readFile();
+        readFile();
         
         //readTSPFile();
         
