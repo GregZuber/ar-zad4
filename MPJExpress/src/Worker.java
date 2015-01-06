@@ -22,9 +22,19 @@ public class Worker {
         
         receiveGraph();
         
-        receiveTrees(me);
+        boolean notInterrupted = true;
+        while (notInterrupted){
+            notInterrupted = receiveTrees(me);
+            
+            if (!notInterrupted){
+                break;
+            }
+            
+            sendEndSignal();
+        }
+
         
-        sendEndSignal();
+        
         
     }
     
@@ -36,39 +46,50 @@ public class Worker {
         MPI.COMM_WORLD.Send(endWork, 0, 1, MPI.OBJECT, 0, Main.WORKER_END_WORK_TAG);        
     }
 
-    private void receiveTrees(int me) {
+    private boolean receiveTrees(int me) {
 
         if (true){
             
             
             Status status = null;
+            //System.out.println("worker czeka na sygnał");
             while (status == null){
-                status = MPI.COMM_WORLD.Probe(0, 10);
+                status = MPI.COMM_WORLD.Probe(0, MPI.ANY_TAG);
             }
+            
+            //System.out.println("worker dostał sygnał");
             
             TreeNode[] treeNodes = new TreeNode[status.count] ;
             
-            MPI.COMM_WORLD.Recv(treeNodes, 0, status.count, MPI.OBJECT, 0, 10);
+            status = MPI.COMM_WORLD.Recv(treeNodes, 0, status.count, MPI.OBJECT, 0, MPI.ANY_TAG);
             
-            List<TreeNode> nodeList = new LinkedList<TreeNode>();
-            for (int i = 0 ; i < status.count ; i++){
-                nodeList.add(treeNodes[i]);
-            }
-            Collections.sort(nodeList, new CustomComparator());
-            
-            
-            
-            
-            for (TreeNode node : nodeList){
-                //System.out.println(node.getSumValue());
+            if (status.tag == 10){
+                List<TreeNode> nodeList = new LinkedList<TreeNode>();
+                for (int i = 0 ; i < status.count ; i++){
+                    nodeList.add(treeNodes[i]);
+                }
+                Collections.sort(nodeList, new CustomComparator());
                 
-                graph.getEdges(node.getNodeNumberInGraph());
                 
-                recursiveWatchTree(node.getNodeNumberInGraph(), node.getPathFromRoot()  , node.getSumValue());
+                
+                
+                for (TreeNode node : nodeList){
+                    //System.out.println(node.getSumValue());
+                    
+                    graph.getEdges(node.getNodeNumberInGraph());
+                    
+                    recursiveWatchTree(node.getNodeNumberInGraph(), node.getPathFromRoot()  , node.getSumValue());
+                }
+                
+            } else {
+                return false;
             }
             
             
-        }        
+            
+            
+        }
+        return true;        
     }
     
     private class CustomComparator implements Comparator<TreeNode> {
@@ -113,11 +134,11 @@ public class Worker {
         
 
         
-        //System.out.println("PATH ========================= " + node.getPathFromRoot());
+        //System.out.println("PATH ========================= " + path);
         
         
         if (sum >= shortestPath){
-            //System.out.println("Odcinam drzewo watek " + me + " na nodzie: " + node.getPathFromRoot());
+            //System.out.println("Odcinam drzewo watek " + me + " na nodzie: " + path);
             return;
         }
         

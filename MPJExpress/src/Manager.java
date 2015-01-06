@@ -13,8 +13,12 @@ import mpi.Status;
 public class Manager {
 
     //private static final String SOURCE_FILE = "graph_10.txt";
-    private static final String SOURCE_FILE = "graph_16.txt";
-    //private static final String SOURCE_FILE = "burma.tsp";
+    //private static final String SOURCE_FILE = "graph_16.txt";
+    private static final String SOURCE_FILE = "p01.tsp";
+    
+    int numbersOfChildren;
+    
+    int numberOfGraphChildrenAssigned = 0;
     
     Graph graph = GraphInstance.getInstance();
     int numberOfThreads;
@@ -22,6 +26,7 @@ public class Manager {
     private double bestSolution = Double.MAX_VALUE;
     private TreeNode bestSolutionNode;
     public long startTime;
+    TreeNode root;
     
     public void run(int numberOfThreads) throws IOException {
         
@@ -31,15 +36,15 @@ public class Manager {
         
         //readMatrixFile();
         
-        readFile();
+        //readFile();
         
-        //readTSPFile();
+        readTSPFile();
         
         startTime = System.currentTimeMillis();
         
         sendGraph();
         
-        TreeNode root = prepareRoot();
+        root = prepareRoot();
         
         sendRootChildrenToWorkers(root);
         
@@ -117,6 +122,30 @@ public class Manager {
     }
     
     private void sendRootChildrenToWorkers(TreeNode root) {
+        numbersOfChildren = root.getChildren().size();
+        
+
+        
+        int threadNumber = 1;
+        for ( ; threadNumber < numberOfThreads ; threadNumber++){
+            
+            TreeNode[] treeNodes = null;
+            treeNodes = new TreeNode[1];
+            treeNodes[0] = root.getChildren().get(numberOfGraphChildrenAssigned);
+            
+
+            
+            numberOfGraphChildrenAssigned++;
+            
+           
+            MPI.COMM_WORLD.Send(treeNodes, 0, 1, MPI.OBJECT, threadNumber, 10);
+//            System.out.println("in root, i=" + i);
+       }
+        
+    }
+    
+    /*
+    private void sendRootChildrenToWorkers(TreeNode root) {
         int i = 0;
         
         int numbersOfChildren = root.getChildren().size();
@@ -152,6 +181,7 @@ public class Manager {
        }
         
     }
+    */
     
     private boolean checkForResponsesFromWorkers() {
         TreeNode[] nodes = new TreeNode[1];
@@ -163,7 +193,7 @@ public class Manager {
             if (node.getSumValue() < bestSolution){
                 bestSolution = node.getSumValue();
                 bestSolutionNode = node;
-                System.out.println( "path " + node.getPathFromRoot() + " sum value " + node.getSumValue() + " watek " + status.source);
+                //System.out.println( "path " + node.getPathFromRoot() + " sum value " + node.getSumValue() + " watek " + status.source);
                 for (int i = 1 ; i < numberOfThreads ; i++ ){
                     //System.out.println("sent to " + i);
                     MPI.COMM_WORLD.Isend(nodes, 0, 1, MPI.OBJECT, i, Main.BEST_SOLUTION_SEND_TO_WORKER);
@@ -173,7 +203,31 @@ public class Manager {
 
             
         } else if (status.tag == Main.WORKER_END_WORK_TAG){
-            workersThatEndsWork ++;
+            //System.out.println("otrzymałem end od " + status.source);
+            if (numberOfGraphChildrenAssigned == numbersOfChildren){
+                workersThatEndsWork++;
+                
+                TreeNode[] treeNodes = new TreeNode[1];
+                treeNodes[0] = new TreeNode();
+                
+                //System.out.println("MANAGER WYSŁAŁ SYGNAŁ O ZAKOŃCZENIU");
+                
+                MPI.COMM_WORLD.Send(treeNodes, 0, 1, MPI.OBJECT, status.source, Main.SEND_TO_WORKER_END_SIGNAL);
+            } else {
+                TreeNode[] treeNodes = null;
+                treeNodes = new TreeNode[1];
+                treeNodes[0] = root.getChildren().get(numberOfGraphChildrenAssigned);
+                
+
+                
+                numberOfGraphChildrenAssigned++;
+                
+                //System.out.println("numberOfGraphChildrenAssigned " + numberOfGraphChildrenAssigned);
+                //System.out.println("numbersOfChildren " + numbersOfChildren);
+                
+               
+                MPI.COMM_WORLD.Send(treeNodes, 0, 1, MPI.OBJECT, status.source, 10);
+            }
         }
         
         if (workersThatEndsWork == numberOfThreads - 1){
